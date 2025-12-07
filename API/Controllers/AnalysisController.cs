@@ -43,7 +43,7 @@ public class AnalysisController : ControllerBase
     [HttpPost("analyze")]
     public async Task<IActionResult> Analyze(
         [FromForm] Guid userId,
-        [FromForm] int contentType,
+        [FromForm] string contentType,
         [FromForm] string? textContent,
         [FromForm] IFormFile? file)
     {
@@ -53,18 +53,19 @@ public class AnalysisController : ControllerBase
 
             // التحقق من وجود المستخدم
             var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
+            // تحويل contentType من string إلى int
+            if (!int.TryParse(contentType, out int contentTypeInt))
             {
-                return NotFound(new { message = "User not found" });
+                return BadRequest(new { message = "Invalid content type format. Use 1 for Text, 2 for Image, 3 for Video" });
             }
 
             // التحقق من نوع المحتوى
-            if (!Enum.IsDefined(typeof(ContentType), contentType))
+            if (!Enum.IsDefined(typeof(ContentType), contentTypeInt))
             {
                 return BadRequest(new { message = "Invalid content type. Use 1 for Text, 2 for Image, 3 for Video" });
             }
 
-            var type = (ContentType)contentType;
+            var type = (ContentType)contentTypeInt;
             string content;
             Application.Models.AiDetectionResult detectionResult;
 
