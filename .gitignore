@@ -1,0 +1,47 @@
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio Code
+.vscode/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# NuGet Packages
+*.nupkg
+packages/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# appsettings with sensitive data
+appsettings.Development.json
+appsettings.Production.json
+
+# Uploads
+API/wwwroot/uploads/*
+!API/wwwroot/uploads/.gitkeep
+
+# ML Models
+ML_Models/venv/
+ML_Models/__pycache__/
+ML_Models/**/model.safetensors
+ML_Models/**/*.bin
+!ML_Models/**/training_args.bin
