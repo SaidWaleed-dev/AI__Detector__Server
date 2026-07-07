@@ -1,0 +1,121 @@
+====================================================================
+         سجل رفع مشروع Sentinel AI - DEPLOYMENT LOG
+====================================================================
+تاريخ البدء: 2026-07-06
+آخر تحديث:   2026-07-07
+الحالة العامة: جارٍ (قيد التنفيذ)
+
+====================================================================
+              الجزء الأول: الملفات المُعدَّلة
+====================================================================
+
+1. ML_Models/requirements.txt
+   - تم رفع نسخة pytorch من 2.2 إلى 2.4.1+cpu
+   - تم إضافة مكتبة python-multipart
+   - تم إضافة مكتبة huggingface_hub
+
+2. ML_Models/main.py
+   - تم إضافة دالة download_models_from_hub()
+   - تم إضافة import من huggingface_hub
+
+3. API/appsettings.json (تم تحديثه للإنتاج)
+   - DefaultConnection → sql1001.site4now.net (SmarterASP)
+   - PythonApiUrl → https://said80-sentinel-ai-engine.hf.space
+   - ClientUrl → https://ai-detector-client.vercel.app (مؤقت - يُحدَّث بعد Vercel)
+   - FileUpload.BaseUrl → https://saidwaleed-001-site1.htempurl.com
+
+====================================================================
+              الجزء الثاني: خطوات الرفع المكتملة ✅
+====================================================================
+
+[✅] الخطوة 1: إنشاء مستودع الموديلات على Hugging Face
+   - الرابط: https://huggingface.co/Said80/sentinel-ai-models
+   - الملفات المرفوعة:
+     * best_asv_model.pt        (345 MB) - موديل الصوت
+     * image_model_final_v1.pt  (15 MB)  - موديل الصور
+     * image_model_final_weights.pt (15 MB)
+     * مجلد english_model_final/ (موديل النصوص الإنجليزية - 267 MB)
+     * مجلد final_arabert_ai_detector/ (موديل النصوص العربية - 540 MB)
+
+[✅] الخطوة 2: إنشاء Space على Hugging Face لخادم البايثون
+   - رابط الـ Space: https://huggingface.co/spaces/Said80/sentinel-ai-engine
+   - SDK: Docker / Blank
+   - الحالة: 🟢 Running
+   - رابط الـ API: https://said80-sentinel-ai-engine.hf.space
+
+[✅] الخطوة 3: تشغيل الـ Space بنجاح
+   - نقاط الـ API المتاحة:
+     * POST /predict/ar    - فحص النصوص العربية
+     * POST /predict/en    - فحص النصوص الإنجليزية
+     * POST /predict/image - فحص الصور
+     * POST /predict/audio - فحص الصوت
+     * POST /predict/video - فحص الفيديو
+
+[✅] الخطوة 4 - جزء A: إنشاء حساب SmarterASP.net
+   - Hosting Account ID: saidwaleed-001
+   - Plan: 60 Day Free Trial - US
+   - رابط الموقع: https://saidwaleed-001-site1.htempurl.com
+   - IP: 204.188.228.38
+
+[✅] الخطوة 4 - جزء B: إنشاء قاعدة البيانات MSSQL
+   - Database Name:  db_acbb03_aidetect
+   - Login ID:       db_acbb03_aidetect_admin
+   - SQL Server:     sql1001.site4now.net
+   - Password:       AiDetect12#
+   - Disk:           1000 MB
+   - Connection String:
+     Server=sql1001.site4now.net;Database=db_acbb03_aidetect;
+     User Id=db_acbb03_aidetect_admin;Password=AiDetect12#;
+     TrustServerCertificate=True;
+
+[✅] الخطوة 4 - جزء C: تشغيل Migration على قاعدة البيانات السحابية
+   - الأمر: dotnet ef database update --project Infrastructure/ --startup-project API/
+   - النتيجة: Done ✅ (جميع الجداول أُنشئت بنجاح)
+
+[✅] الخطوة 4 - جزء D: بناء ملفات الباك إند للإنتاج
+   - الأمر: dotnet publish API/API.csproj -c Release -o ./publish -r win-x64 --self-contained true
+   - النتيجة: publish/ جاهز (56MB, يحتوي API.exe + كل التبعيات)
+   - web.config: processPath=".\API.exe" (لا يحتاج dotnet في PATH)
+   - الملف المضغوط: /home/said-waleed/AI__Detector__Server/publish.zip
+
+====================================================================
+              الجزء الثالث: خطوات الرفع المتبقية ⏳
+====================================================================
+
+[⏳] الخطوة 4 - جزء E: رفع publish.zip على SmarterASP (المرحلة الأخيرة)
+   ما يجب فعله غداً:
+   (1) افتح SmarterASP → FILES → File Manager → site1/
+   (2) احذف الملفات القديمة (Select All → Delete)
+   (3) ارفع: /home/said-waleed/AI__Detector__Server/publish.zip (56MB)
+   (4) فك الضغط: حدد publish.zip → Unzip → وجهة /site1/ + Overwrite → Submit
+   (5) انتظر Work Queue → انتهاء
+   (6) ادخل مجلد publish/ → حدد الكل → Move → وجهة /site1/ + Overwrite → Submit
+   (7) انتظر Work Queue → انتهاء
+   (8) اختبر الرابط: https://saidwaleed-001-site1.htempurl.com/swagger
+       إذا فتح Swagger → الباك إند شغال ✅
+
+[⏳] الخطوة 5: رفع الفرونت إند React على Vercel
+   (1) رفع مجلد AI__Detector__Client على GitHub
+       cd /home/said-waleed/AI__Detector__Client
+       git init && git add . && git commit -m "Initial commit"
+       git remote add origin https://github.com/USERNAME/ai-detector-client.git
+       git push -u origin main
+   (2) اذهب لـ https://vercel.com → Import → اختر المستودع
+   (3) أضف Environment Variable:
+       VITE_API_URL = https://saidwaleed-001-site1.htempurl.com
+   (4) اضغط Deploy → احصل على رابط Vercel
+   (5) حدّث ClientUrl في appsettings.json برابط Vercel الحقيقي
+   (6) أعد publish + رفع الباك إند
+
+====================================================================
+                    ملاحظات مهمة تذكرها
+====================================================================
+
+* بيانات قاعدة البيانات محفوظة أعلاه ← لا تنساها!
+* الـ Space على Hugging Face يدخل في وضع خمول (Sleep) بعد فترة.
+  لإيقاظه، أرسل أي طلب وسيعود خلال ثوانٍ.
+* ملف publish.zip جاهز محلياً في:
+  /home/said-waleed/AI__Detector__Server/publish.zip
+* نسخة الباك إند: Self-Contained win-x64 (لا يحتاج .NET على السيرفر)
+
+====================================================================
