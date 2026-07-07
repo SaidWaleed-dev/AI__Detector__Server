@@ -242,6 +242,26 @@ public class DetectionController : ControllerBase
         return Ok(response);
     }
 
+    [HttpDelete("history/{contentId}")]
+    public async Task<IActionResult> DeleteHistoryItem(Guid contentId)
+    {
+        _logger.LogInformation("Deleting history item {ContentId}", contentId);
+        var deleted = await _detectionRepository.DeleteContentAsync(contentId);
+        if (!deleted)
+        {
+            return NotFound(new { message = "History record not found" });
+        }
+        return Ok(new { message = "Record deleted successfully" });
+    }
+
+    [HttpDelete("history/clear/{userId}")]
+    public async Task<IActionResult> ClearHistory(Guid userId)
+    {
+        _logger.LogInformation("Clearing history for user {UserId}", userId);
+        var deleted = await _detectionRepository.DeleteAllUserContentAsync(userId);
+        return Ok(new { message = "History cleared successfully" });
+    }
+
     private string GetLocalPathFromUrl(string url)
     {
         var fileName = Path.GetFileName(new Uri(url).AbsolutePath);

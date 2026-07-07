@@ -6,4 +6,5 @@ internal class PythonApiResponse
     public double Ai_Probability { get; set; }
     public double Confidence { get; set; }
     public string Language { get; set; }
+    public string Details { get; set; }
 }

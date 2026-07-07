@@ -1,6 +1,7 @@
 using Application.Interfaces;
 using Application.Models;
 using System.Diagnostics;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -120,61 +121,235 @@ public class RealAiDetectionService : IAiDetectionService
     }
 
     /// <summary>
-    /// تحليل صورة
+    /// تحليل صورة باستخدام EfficientNet-B0 عبر سيرفر البايثون
     /// </summary>
     public async Task<AiDetectionResult> DetectImageAsync(string imagePath)
     {
         var stopwatch = Stopwatch.StartNew();
-        await Task.Delay(150);
-        
-        var indicators = new List<string> { "لا يوجد موديل صور حقيقي بعد - يعتمد على Mock Logic" };
-        var random = new Random(imagePath.GetHashCode());
-        var finalProbability = random.NextDouble();
+
+        if (!File.Exists(imagePath))
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"الملف غير موجود: {imagePath}",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
+        PythonApiResponse pythonResponse = null;
+        try
+        {
+            using var form    = new MultipartFormDataContent();
+            await using var fs = File.OpenRead(imagePath);
+            var fileContent   = new StreamContent(fs);
+            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/octet-stream");
+            form.Add(fileContent, "file", Path.GetFileName(imagePath));
+
+            var res = await _httpClient.PostAsync($"{_pythonApiUrl}/predict/image", form);
+            if (res.IsSuccessStatusCode)
+            {
+                var json = await res.Content.ReadAsStringAsync();
+                pythonResponse = JsonSerializer.Deserialize<PythonApiResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"فشل الاتصال بموديل الصور: {ex.Message}",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
         stopwatch.Stop();
-        
+        if (pythonResponse == null)
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = "لم يتم الحصول على نتيجة صالحة من موديل الصور.",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
         return new AiDetectionResult
         {
-            AiProbability = finalProbability,
-            IsAiGenerated = finalProbability > 0.5,
-            Confidence = 0.8,
-            Details = $"الوصول لموديل الصور غير مدعوم حالياً (محاكاة). الاحتمالية: {finalProbability:P0}",
-            Indicators = indicators,
+            AiProbability = pythonResponse.Ai_Probability,
+            IsAiGenerated = pythonResponse.Is_Ai,
+            Confidence    = pythonResponse.Confidence,
+            Details       = pythonResponse.Details ?? (pythonResponse.Is_Ai
+                ? "الصورة على الأرجح مولّدة بالذكاء الاصطناعي."
+                : "الصورة على الأرجح حقيقية."),
+            Indicators    = new List<string> { "EfficientNet-B0" },
             ProcessingTimeMs = stopwatch.ElapsedMilliseconds
         };
     }
 
     /// <summary>
-    /// تحليل فيديو
+    /// تحليل فيديو باستخدام فحص الفريمات والصوت عبر سيرفر البايثون
     /// </summary>
     public async Task<AiDetectionResult> DetectVideoAsync(string videoPath)
     {
         var stopwatch = Stopwatch.StartNew();
-        await Task.Delay(200);
+
+        if (!File.Exists(videoPath))
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"الملف غير موجود: {videoPath}",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
+        var ext = Path.GetExtension(videoPath).ToLowerInvariant();
+        var allowedVideoTypes = new[] { ".mp4", ".avi", ".mov", ".mkv", ".webm" };
+        if (!allowedVideoTypes.Contains(ext))
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"نوع الفيديو غير مدعوم: {ext}. استخدم mp4, avi, mov, mkv أو webm",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
+        PythonApiResponse pythonResponse = null;
+        try
+        {
+            using var form    = new MultipartFormDataContent();
+            await using var fs = File.OpenRead(videoPath);
+            var fileContent   = new StreamContent(fs);
+            var mimeType      = ext == ".mp4" ? "video/mp4" : "application/octet-stream";
+            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
+            form.Add(fileContent, "file", Path.GetFileName(videoPath));
+
+            // Video inference can take longer - use a generous timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
+            var res = await _httpClient.PostAsync($"{_pythonApiUrl}/predict/video", form, cts.Token);
+            if (res.IsSuccessStatusCode)
+            {
+                var json = await res.Content.ReadAsStringAsync();
+                pythonResponse = JsonSerializer.Deserialize<PythonApiResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"فشل الاتصال بموديل الفيديو: {ex.Message}",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
         stopwatch.Stop();
+        if (pythonResponse == null)
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = "لم يتم الحصول على نتيجة صالحة من موديل الفيديو.",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
         return new AiDetectionResult
         {
-            AiProbability = 0.5,
-            IsAiGenerated = false,
-            Confidence = 0.5,
-            Details = "موديل الفيديو غير متوفر حالياً.",
+            AiProbability = pythonResponse.Ai_Probability,
+            IsAiGenerated = pythonResponse.Is_Ai,
+            Confidence    = pythonResponse.Confidence,
+            Details       = pythonResponse.Details ?? (pythonResponse.Is_Ai
+                ? "الفيديو على الأرجح مولّد بالذكاء الاصطناعي / مزيّف (Deepfake)."
+                : "الفيديو على الأرجح حقيقي."),
+            Indicators    = new List<string> { "Multimodal Video (EfficientNet + Wav2Vec2)" },
             ProcessingTimeMs = stopwatch.ElapsedMilliseconds
         };
     }
 
     /// <summary>
-    /// تحليل صوتي
+    /// تحليل صوتي باستخدام Wav2Vec2 عبر سيرفر البايثون
+    /// يدعم .wav و .mp3 | يحوّل لـ mono 16kHz | يقسّم إلى chunks بحد أقصى 3 ثوانٍ
     /// </summary>
     public async Task<AiDetectionResult> DetectAudioAsync(string audioPath)
     {
         var stopwatch = Stopwatch.StartNew();
-        await Task.Delay(120);
+
+        if (!File.Exists(audioPath))
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"الملف غير موجود: {audioPath}",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
+        var ext = Path.GetExtension(audioPath).ToLowerInvariant();
+        if (ext != ".wav" && ext != ".mp3")
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"نوع الملف غير مدعوم: {ext}. استخدم .wav أو .mp3",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
+        PythonApiResponse pythonResponse = null;
+        try
+        {
+            using var form    = new MultipartFormDataContent();
+            await using var fs = File.OpenRead(audioPath);
+            var fileContent   = new StreamContent(fs);
+            var mimeType      = ext == ".mp3" ? "audio/mpeg" : "audio/wav";
+            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
+            form.Add(fileContent, "file", Path.GetFileName(audioPath));
+
+            // Audio inference can be slow — use generous timeout
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+            var res = await _httpClient.PostAsync($"{_pythonApiUrl}/predict/audio", form, cts.Token);
+            if (res.IsSuccessStatusCode)
+            {
+                var json = await res.Content.ReadAsStringAsync();
+                pythonResponse = JsonSerializer.Deserialize<PythonApiResponse>(json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+        }
+        catch (Exception ex)
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = $"فشل الاتصال بموديل الصوت: {ex.Message}",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
         stopwatch.Stop();
+        if (pythonResponse == null)
+        {
+            return new AiDetectionResult
+            {
+                AiProbability = 0, IsAiGenerated = false, Confidence = 0,
+                Details = "لم يتم الحصول على نتيجة صالحة من موديل الصوت.",
+                ProcessingTimeMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+
         return new AiDetectionResult
         {
-            AiProbability = 0.5,
-            IsAiGenerated = false,
-            Confidence = 0.5,
-            Details = "موديل الصوت غير متوفر حالياً.",
+            AiProbability = pythonResponse.Ai_Probability,
+            IsAiGenerated = pythonResponse.Is_Ai,
+            Confidence    = pythonResponse.Confidence,
+            Details       = pythonResponse.Details ?? (pythonResponse.Is_Ai
+                ? "الصوت على الأرجح مولّد بالذكاء الاصطناعي / مزوّر."
+                : "الصوت على الأرجح حقيقي."),
+            Indicators    = new List<string> { "Wav2Vec2 (ASVspoof)", "16kHz mono", "3s chunks" },
             ProcessingTimeMs = stopwatch.ElapsedMilliseconds
         };
     }

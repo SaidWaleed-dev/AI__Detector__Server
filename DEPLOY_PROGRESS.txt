@@ -22,7 +22,7 @@
    - DefaultConnection → sql1001.site4now.net (SmarterASP)
    - PythonApiUrl → https://said80-sentinel-ai-engine.hf.space
    - ClientUrl → https://ai-detector-client.vercel.app (مؤقت - يُحدَّث بعد Vercel)
-   - FileUpload.BaseUrl → https://saidwaleed-001-site1.htempurl.com
+   - FileUpload.BaseUrl → https://saidwaleed-001-site1.jtempurl.com
 
 ====================================================================
               الجزء الثاني: خطوات الرفع المكتملة ✅
@@ -54,7 +54,7 @@
 [✅] الخطوة 4 - جزء A: إنشاء حساب SmarterASP.net
    - Hosting Account ID: saidwaleed-001
    - Plan: 60 Day Free Trial - US
-   - رابط الموقع: https://saidwaleed-001-site1.htempurl.com
+   - رابط الموقع: https://saidwaleed-001-site1.jtempurl.com
    - IP: 204.188.228.38
 
 [✅] الخطوة 4 - جزء B: إنشاء قاعدة البيانات MSSQL
@@ -91,7 +91,7 @@
    (5) انتظر Work Queue → انتهاء
    (6) ادخل مجلد publish/ → حدد الكل → Move → وجهة /site1/ + Overwrite → Submit
    (7) انتظر Work Queue → انتهاء
-   (8) اختبر الرابط: https://saidwaleed-001-site1.htempurl.com/swagger
+   (8) اختبر الرابط: https://saidwaleed-001-site1.jtempurl.com/swagger
        إذا فتح Swagger → الباك إند شغال ✅
 
 [⏳] الخطوة 5: رفع الفرونت إند React على Vercel
@@ -102,7 +102,7 @@
        git push -u origin main
    (2) اذهب لـ https://vercel.com → Import → اختر المستودع
    (3) أضف Environment Variable:
-       VITE_API_URL = https://saidwaleed-001-site1.htempurl.com
+       VITE_API_URL = https://saidwaleed-001-site1.jtempurl.com
    (4) اضغط Deploy → احصل على رابط Vercel
    (5) حدّث ClientUrl في appsettings.json برابط Vercel الحقيقي
    (6) أعد publish + رفع الباك إند

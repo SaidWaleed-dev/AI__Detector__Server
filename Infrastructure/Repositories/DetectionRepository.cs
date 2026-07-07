@@ -116,4 +116,27 @@ public class DetectionRepository : GenericRepository<Content>, IDetectionReposit
     {
         return await _context.Contents.CountAsync(c => c.UserId == userId && c.Type == type);
     }
+
+    public async Task<bool> DeleteContentAsync(Guid id)
+    {
+        var content = await _context.Contents.FindAsync(id);
+        if (content == null) return false;
+
+        _context.Contents.Remove(content);
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteAllUserContentAsync(Guid userId)
+    {
+        var userContents = await _context.Contents
+            .Where(c => c.UserId == userId)
+            .ToListAsync();
+
+        if (!userContents.Any()) return false;
+
+        _context.Contents.RemoveRange(userContents);
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

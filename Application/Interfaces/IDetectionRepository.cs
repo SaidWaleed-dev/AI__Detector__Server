@@ -18,4 +18,6 @@ public interface IDetectionRepository
     Task<AIModel?> GetModelByNameAsync(string name);
     Task<AIModel> AddModelAsync(AIModel model);
     Task<int> GetUsageCountAsync(Guid userId, ContentType type);
+    Task<bool> DeleteContentAsync(Guid id);
+    Task<bool> DeleteAllUserContentAsync(Guid userId);
 }

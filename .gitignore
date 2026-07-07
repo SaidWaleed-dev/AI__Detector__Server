@@ -45,3 +45,10 @@ ML_Models/__pycache__/
 ML_Models/**/model.safetensors
 ML_Models/**/*.bin
 !ML_Models/**/training_args.bin
+ML_Models/**/*.pt
+ML_Models/best_asv_model/
+ML_Models/english_model_final/
+ML_Models/final_arabert_ai_detector/
+ML_Models/image_model_final_v1/
+ML_Models/image_model_final_weights/
+ML_Models/*_output.txt

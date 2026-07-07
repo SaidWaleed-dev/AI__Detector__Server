@@ -65,11 +65,21 @@ public class SmtpEmailService : IEmailService
         {
             try {
                 _logger.LogInformation("Attempting to send password reset email to {Email}.", email);
+                
+                // Set timeout for connection (30 seconds)
+                client.Timeout = 30000;
+                
+                // Bypass SSL/TLS certificate validation (e.g. CRL validation issues)
+                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+                
                 await client.ConnectAsync(smtpServer, port, MailKit.Security.SecureSocketOptions.StartTls);
                 await client.AuthenticateAsync(username, appPassword);
                 await client.SendAsync(message);
                 await client.DisconnectAsync(true);
                 _logger.LogInformation(" Password reset email successfully sent to {Email}", email);
+            } catch (System.Net.Sockets.SocketException ex) {
+                _logger.LogError(ex, "Network error sending password reset email to {Email}. Check SMTP server address '{SmtpServer}', port {Port}, and network connectivity.", email, smtpServer, port);
+                throw;
             } catch (Exception ex) {
                 _logger.LogError(ex, "Failed to send password reset email to {Email}. Verify SMTP settings and credentials.", email);
                 throw;
@@ -120,13 +130,23 @@ public class SmtpEmailService : IEmailService
         {
             try {
                 _logger.LogInformation("Attempting to send verification email to {Email}.", email);
+                
+                // Set timeout for connection (30 seconds)
+                client.Timeout = 30000;
+                
+                // Bypass SSL/TLS certificate validation (e.g. CRL validation issues)
+                client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+                
                 await client.ConnectAsync(smtpServer, port, MailKit.Security.SecureSocketOptions.StartTls);
                 await client.AuthenticateAsync(username, appPassword);
                 await client.SendAsync(message);
                 await client.DisconnectAsync(true);
                 _logger.LogInformation(" Verification email successfully sent to {Email}", email);
+            } catch (System.Net.Sockets.SocketException ex) {
+                _logger.LogError(ex, "Network error sending verification email to {Email}. Check SMTP server address '{SmtpServer}', port {Port}, and network connectivity.", email, smtpServer, port);
+                throw;
             } catch (Exception ex) {
-                _logger.LogError(ex, "Failed to send verification email to {Email}. Check SMTP credentials and configuration.", email);
+                _logger.LogError(ex, "Failed to send verification email to {Email}.", email);
                 throw;
             }
         }
